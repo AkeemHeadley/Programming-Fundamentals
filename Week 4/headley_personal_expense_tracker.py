@@ -44,7 +44,6 @@ def load_records(filename):
                 if not row:
                     continue
 
-                # ✅ SKIP HEADER ROW
                 if row[0].lower() == "date":
                     continue
 
