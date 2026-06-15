@@ -26,7 +26,7 @@ def build_record(description, amount, category):
 
 
 # ----------------------------
-# FUNCTION 2: LOAD RECORDS (FIXED HEADER ISSUE)
+# FUNCTION 2: LOAD RECORDS
 # ----------------------------
 def load_records(filename):
     records = []
@@ -56,7 +56,7 @@ def load_records(filename):
 
 
 # ----------------------------
-# FUNCTION 3: DISPLAY RECORDS (SAFE)
+# FUNCTION 3: DISPLAY RECORDS 
 # ----------------------------
 def display_records(records):
     if not records:
@@ -138,7 +138,7 @@ def filter_by_month(records, year, month):
 
 
 # ----------------------------
-# FUNCTION 7: SAVE RECORD (FIXED PATH)
+# FUNCTION 7: SAVE RECORD 
 # ----------------------------
 def save_record(filename, record):
     full_path = os.path.join(BASE_DIR, filename)
