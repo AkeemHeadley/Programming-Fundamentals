@@ -1,0 +1,14 @@
+EXPENSE SUMMARY REPORT
+Generated: 2026-06-14
+
+Total records: 3
+Total spending: $46270.00
+
+Spending by Category:
+Food            $35000.00
+House           $8000.00
+Entertainment   $3270.00
+
+This Month (2026-06)
+Records: 3
+Spent: $46270.00
