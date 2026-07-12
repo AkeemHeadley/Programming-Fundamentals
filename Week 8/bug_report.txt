@@ -1,0 +1,186 @@
+STUDENT RECORD MANAGEMENT SYSTEM - BUG REPORT
+Original file: student_records.py
+Fixed file:    student_records_fixed.py
+===============================================================================
+
+Bug #: 1
+Type: Crash
+Line(s): 67-69
+Original:
+    csv_file = open(csv_filename, newline="")
+    csv_reader = csv.DictReader(csv_file)
+    csv_file.close()
+Fixed:
+    csv_file = open(csv_filename, newline="")
+    csv_reader = csv.DictReader(csv_file)
+    (file is closed AFTER the for-loop that reads csv_reader, not before)
+Symptom: As soon as Option 1 tried to iterate over csv_reader, Python raised
+    "ValueError: I/O operation on closed file." The program crashed on the
+    very first attempt to load a CSV.
+Explanation: csv.DictReader reads rows lazily from the underlying file
+    object as you iterate it. Closing the file before iterating removed the
+    data source the reader needed, so moving csv_file.close() to after the
+    for-loop lets every row be read before the file is closed.
+
+Bug #: 2
+Type: Crash
+Line(s): 135, 138
+Original:
+    while search_index <= len(student_records):
+        if student_records[search_index]["StudentID"].upper() == search_id:
+            found_student = student_records[search_index]
+            search_index = len(student_records)  - 1      # Force loop to end
+        else:
+            search_index = search_index + 1
+Fixed:
+    while search_index < len(student_records) and found_student is None:
+        if student_records[search_index]["StudentID"].upper() == search_id:
+            found_student = student_records[search_index]
+        else:
+            search_index = search_index + 1
+Symptom: The "<=" allowed search_index to reach a value equal to
+    len(student_records), one past the last valid index, causing
+    "IndexError: list index out of range." Depending on where the match was
+    found, the loop could also hang (when the match was the very last
+    record, search_index kept resetting to the same value forever).
+Explanation: Valid list indices run from 0 to len(list)-1, so the loop
+    condition must use "<", not "<=". Stopping the loop as soon as
+    found_student is no longer None (instead of trying to fake an early
+    exit by reassigning search_index) removes the need for the fragile
+    "force loop to end" trick entirely.
+
+Bug #: 3
+Type: Logic
+Line(s): 86 (missing line before it)
+Original:
+    (student_records is never cleared before a new load; each call to
+    Option 1 appends to whatever was already in the list)
+Fixed:
+    student_records = []
+    (added immediately before the file is opened, so every load starts
+    from an empty list)
+Symptom: Choosing Option 1 a second time doubled the record count (20
+    records instead of 10) rather than replacing the previously loaded data.
+Explanation: append() was being called on a list that already held the
+    prior load's records. Resetting student_records to an empty list right
+    before loading guarantees a fresh load, no matter how many times
+    Option 1 is used.
+
+Bug #: 4
+Type: Logic
+Line(s): 22, 89 (missing line before it)
+Original:
+    csv_loaded = False   (initialized, but never set to True anywhere)
+Fixed:
+    csv_loaded = True
+    (added right after the records finish loading, before the success
+    message is printed)
+Symptom: Options 2 and 3 always printed "No data loaded. Please use Option 1
+    to read a CSV file first," even immediately after a successful load.
+Explanation: csv_loaded is the flag Options 2 and 3 check before running.
+    Nothing in the original code ever flipped it to True after a
+    successful read, so the flag was permanently stuck at its initial
+    value of False.
+
+Bug #: 5
+Type: Logic
+Line(s): 103
+Original:
+    print(f"{'#':<5} {'Student ID':<12} {'Student Name':<22} {'Major':<24} {'GPA':<6} {'Credits'}")
+Fixed:
+    print(f"{'#':<5}{'Student ID':<12}{'Student Name':<22}{'Major':<24}{'GPA':<6}{'Credits'}")
+Symptom: The header row printed with an extra space before every column,
+    while the data rows below it (lines 109-115) had no such spaces. The
+    header and the data columns did not line up.
+Explanation: The data rows rely purely on field width (e.g. "<12") to
+    align columns, with no literal spaces inserted between fields. The
+    header must follow the exact same convention, so removing the stray
+    spaces makes the header line up with the data beneath it.
+
+Bug #: 6
+Type: Logic
+Line(s): 102, 104, 118
+Original:
+    print("-" * 80)
+    ...
+    print("-" * 82)
+    ...
+    print("-" * 82)
+Fixed:
+    print("-" * 80)   (all three separator lines use the same width, 80)
+Symptom: The top divider line was a different length (80 dashes) than the
+    divider lines above/below the data (82 dashes), making the table look
+    uneven.
+Explanation: All three divider lines are meant to frame the same table, so
+    they should all use one consistent width.
+
+Bug #: 7
+Type: Logic
+Line(s): 149
+Original:
+    print(f"  Student ID    : {found_student['Student_ID']}")
+Fixed:
+    print(f"  Student ID    : {found_student['StudentID']}")
+Symptom: Whenever Option 3 found a matching student, displaying the result
+    raised "KeyError: 'Student_ID'."
+Explanation: The dictionaries built in Option 1 use the key "StudentID"
+    (no underscore) -- that is what every other line in the block already
+    uses. "Student_ID" was simply a typo that did not match any existing
+    key.
+
+Bug #: 8
+Type: Logic
+Line(s): 159
+Original:
+    elif menu_choice == 4:
+Fixed:
+    elif menu_choice == "4":
+Symptom: Typing "4" at the menu never exited the program. Instead it always
+    fell through to the "invalid option" message, so Option 4 was
+    unreachable.
+Explanation: menu_choice comes from input(...).strip(), which always
+    returns a string, never an int. Comparing a string to the integer 4
+    can never be True in Python, so the comparison must be against the
+    string "4" (matching how Options 1-3 are checked).
+
+Bug #: 9
+Type: Subtle
+Line(s): 25, 131 (missing line before line 133)
+Original:
+    (found_student is set to None only once, at program start, and is
+    never reset before a new search begins)
+Fixed:
+    found_student = None
+    (added immediately after reading search_id, before the search loop
+    starts)
+Symptom: This bug hid unless you searched twice in a row: after finding a
+    real match, immediately searching a second, non-existent ID would
+    still display the FIRST search's result instead of "No student found."
+Explanation: Because found_student is a variable that persists between
+    loop iterations of the outer "while True" menu loop, a match from a
+    previous search stayed in memory. Explicitly resetting it to None at
+    the start of every search ensures each search starts with a clean
+    slate.
+
+Bug #: 10
+Type: Subtle
+Line(s): 131, 136
+Original:
+    search_id = input("Enter the Student ID to search for: ").strip()
+    ...
+    if student_records[search_index]["StudentID"].upper() == search_id:
+Fixed:
+    search_id = input("Enter the Student ID to search for: ").strip().upper()
+    ...
+    if student_records[search_index]["StudentID"].upper() == search_id:
+Symptom: This bug only appeared when a user typed a Student ID in
+    lowercase (e.g. "s1005"). The stored ID was uppercased for comparison,
+    but the typed search_id was not, so "s1005" never matched "S1005" even
+    though the record existed.
+Explanation: For a truly case-insensitive comparison, BOTH sides of the
+    "==" must be normalized to the same case. Only one side (the stored
+    ID) was being uppercased in the original code.
+
+===============================================================================
+Summary: 2 Crash bugs, 6 Logic bugs, 2 Subtle bugs = 10 bugs total.
+All nine test cases (T1-T9) pass against student_records_fixed.py.
